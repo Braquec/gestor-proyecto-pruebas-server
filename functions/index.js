@@ -739,7 +739,8 @@ app.post(
     const proyectoId = req.params.id;
     const indexHito = req.params.indexHito;
     const indexPrueba = req.params.indexPrueba;
-    const { Nombre, Propietario, Estado, Resolucion, Resuelto } = req.body;
+    const { Nombre, Propietario, Estado, Resolucion, Resuelto, Tiempo } =
+      req.body;
 
     try {
       const newDefecto = {
@@ -748,6 +749,7 @@ app.post(
         Estado: Estado || "",
         Resolucion: Resolucion || "",
         Resuelto: Resuelto || "",
+        Tiempo: Tiempo || 0,
       };
 
       const proyectoRef = db.collection("proyectos").doc(proyectoId);
@@ -797,7 +799,7 @@ app.post(
   }
 );
 
-//api/proyectos/:id/hito/:indexHito/prueba/:indexPrueba/defecto
+//api/proyectos/:id/hito/:indexHito/prueba/:indexPrueba/defecto/:indexDefecto
 app.delete(
   "/api/proyectos/:id/hito/:indexHito/prueba/:indexPrueba/defecto/:indexDefecto",
   async (req, res, next) => {
@@ -846,6 +848,54 @@ app.delete(
     } catch (error) {
       console.error("Error al eliminar defecto:", error);
       res.status(500).json({ message: "Error al eliminar defecto" });
+    }
+  }
+);
+
+//api/proyectos/:id/hito/:indexHito/prueba/:indexPrueba/defecto/:indexDefecto
+app.put(
+  "/api/proyectos/:id/hito/:indexHito/prueba/:indexPrueba/defecto/:indexDefecto",
+  async (req, res, next) => {
+    const proyectoId = req.params.id;
+    const indexHito = req.params.indexHito;
+    const indexPrueba = req.params.indexPrueba;
+    const indexDefecto = req.params.indexDefecto;
+    const nuevoDefecto = req.body;
+
+    try {
+      const proyectoRef = db.collection("proyectos").doc(proyectoId);
+      const doc = await proyectoRef.get();
+
+      if (!doc.exists) {
+        return res.status(404).json({ message: "Proyecto no encontrado" });
+      }
+
+      const proyectoData = doc.data();
+      const Hito = proyectoData.Hito || [];
+
+      if (!Hito[indexHito]) {
+        return res
+          .status(404)
+          .json({ message: "Hito no encontrado en el índice especificado" });
+      }
+
+      // Acceder al MAP de pruebas dentro del hito seleccionado
+      const prueba = Hito[indexHito].Prueba || {};
+
+      // acceder al MAP de defecto dentro de la prueba seleccionada
+      const defecto = prueba[indexPrueba].Defecto || {};
+
+      defecto[indexDefecto] = nuevoDefecto;
+
+      // Guardar los cambios en Firebase
+      await proyectoRef.update({ Hito });
+
+      res.status(200).json({
+        message: "Defecto actualizado correctamente",
+      });
+    } catch (error) {
+      console.error("Error al actualizar el defecto:", error);
+      res.status(500).json({ message: "Error al actualizar el defecto" });
     }
   }
 );
